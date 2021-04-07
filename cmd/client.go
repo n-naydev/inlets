@@ -159,7 +159,9 @@ func runClient(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("--url should be prefixed with ws:// (insecure) or wss:// (secure)")
 	}
 
-	if strings.HasPrefix(url, "ws://") {
+	if strings.HasPrefix(url, "wss://") {
+		fmt.Printf("Attempting wss connection.\n")
+	} else if strings.HasPrefix(url, "ws://") {
 		if !insecure {
 			fmt.Print(`[================================== Warning ==================================]
 

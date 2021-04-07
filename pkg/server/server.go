@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 
 	"github.com/inlets/inlets/pkg/router"
@@ -50,7 +51,7 @@ func (s *Server) Serve() {
 
 		log.Printf("Control and data ports listening on %s:%d\n", s.ControlAddr, s.ControlPort)
 
-		if err := http.ListenAndServe(fmt.Sprintf("%s:%d", s.ControlAddr, s.ControlPort), nil); err != nil {
+		if err := s.ListenAndServe(fmt.Sprintf("%s:%d", s.ControlAddr, s.ControlPort), nil); err != nil {
 			log.Fatal(err)
 		}
 	} else {
@@ -68,7 +69,7 @@ func (s *Server) Serve() {
 			controlServer.HandleFunc("/tunnel", s.tunnel)
 
 			log.Printf("Control port listening on %s:%d\n", s.ControlAddr, s.ControlPort)
-			if err := http.ListenAndServe(fmt.Sprintf("%s:%d", s.ControlAddr, s.ControlPort), controlServer); err != nil {
+			if err := s.ListenAndServe(fmt.Sprintf("%s:%d", s.ControlAddr, s.ControlPort), controlServer); err != nil {
 				log.Fatal(err)
 			}
 		}()
@@ -83,7 +84,7 @@ func (s *Server) Serve() {
 			http.HandleFunc("/", s.proxy)
 			log.Printf("Data port listening on %s:%d\n", s.DataAddr, s.Port)
 
-			if err := http.ListenAndServe(fmt.Sprintf("%s:%d", s.DataAddr, s.Port), controlServer); err != nil {
+			if err := s.ListenAndServe(fmt.Sprintf("%s:%d", s.DataAddr, s.Port), controlServer); err != nil {
 				log.Fatal(err)
 			}
 		}()
@@ -142,4 +143,15 @@ func (s *Server) authorized(req *http.Request) (id string, ok bool, err error) {
 	}
 
 	return s.router.Add(req), true, nil
+}
+
+func (s *Server) ListenAndServe(addr string, handler http.Handler) error {
+	cert := os.Getenv("CERT")
+	certKey := os.Getenv("CERT_KEY")
+	if cert != "" && certKey != "" {
+		fmt.Println("Using certificate", cert)
+		return http.ListenAndServeTLS(addr, cert, certKey, handler)
+	} else {
+		return http.ListenAndServe(addr, handler)
+	}
 }
